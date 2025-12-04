@@ -6,8 +6,15 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 axum = "0.8.7"
+chrono = "0.4.42"
 clap = { version = "4.5.53", features = ["derive"] }
 config = "0.15.19"
 reqwest = "0.12.24"
 serde = "1.0.228"
+slog = "2.8.2"
+slog-async = "2.8.0"
+slog-scope = "4.4.0"
+slog-scope-futures = "0.1.1"
+slog-term = "2.9.2"
 tokio = { version = "1.48.0", features = ["full"] }
+tokio-util = "0.7.17"
