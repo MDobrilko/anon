@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use crate::{
     cli::{Args, Command},
     config::Config,

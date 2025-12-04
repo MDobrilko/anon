@@ -1,4 +1,4 @@
-use crate::{config::Config, state::AppState};
+use crate::{config::Config, log::error, state::AppState};
 
 use tokio_util::sync::CancellationToken;
 
@@ -19,9 +19,11 @@ async fn start_app(config: Config) -> anyhow::Result<()> {
     run_server(state).await
 }
 
-async fn spawn_shutdown_signal_watcher(ct: CancellationToken) {
+fn spawn_shutdown_signal_watcher(ct: CancellationToken) {
     tokio::spawn(async move {
-        tokio::signal::ctrl_c().await;
+        if let Err(err) = tokio::signal::ctrl_c().await {
+            error!("Failed to receive ctrl+c signal: {err:#}");
+        }
         ct.cancel();
     });
 }
@@ -29,7 +31,10 @@ async fn spawn_shutdown_signal_watcher(ct: CancellationToken) {
 async fn run_server(state: AppState) -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", state.config().http.port)).await?;
 
-    axum::serve(listener, api::make_router(state)).await?;
+    tokio::select! {
+        res = axum::serve(listener, api::make_router(state.clone())) => res,
+        _ = state.cancellation_token().cancelled() => Ok(())
+    }?;
 
     Ok(())
 }

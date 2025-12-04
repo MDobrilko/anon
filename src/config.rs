@@ -6,7 +6,7 @@ use std::{path::PathBuf, str::FromStr};
 
 #[derive(Deserialize)]
 pub struct Config {
-    pub token: String,
+    pub auth: AuthConfig,
     pub http: HttpConfig,
     pub log: LoggingConfig,
 }
@@ -20,6 +20,12 @@ impl Config {
 
         Ok(cfg)
     }
+}
+
+#[derive(Deserialize)]
+pub struct AuthConfig {
+    pub bot_token: String,
+    pub api_token: Option<String>,
 }
 
 #[derive(Deserialize)]
