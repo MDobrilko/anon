@@ -1,7 +1,20 @@
-use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
+use axum::{
+    Json, Router,
+    body::Body,
+    extract::State,
+    http::{Response, StatusCode},
+    response::IntoResponse,
+    routing::post,
+};
 
 use crate::{
-    bot::api::{entities::UpdateMessage, headers::ApiSecretToken},
+    bot::api::{
+        entities::{
+            CallbackData, InlineKeyboardButton, InlineKeyboardMarkup, UpdateMessage,
+            WebhookResponse,
+        },
+        headers::ApiSecretToken,
+    },
     log::{debug, error, info},
     state::AppState,
 };
@@ -20,7 +33,7 @@ pub async fn update(
     State(state): State<AppState>,
     api_token: Option<ApiSecretToken>,
     Json(request): Json<serde_json::Value>,
-) -> StatusCode {
+) -> Response<Body> {
     debug!("Got new request: {request:#?}");
 
     if state
@@ -31,21 +44,44 @@ pub async fn update(
         .is_some_and(|expected_token| Some(expected_token) != api_token.as_deref())
     {
         error!("Incorrect request token");
-        return StatusCode::BAD_REQUEST;
+        return StatusCode::BAD_REQUEST.into_response();
     }
 
-    if let Err(err) = handle_request(request).await {
-        error!("Error during request handling: {err:#}");
+    match handle_request(request).await {
+        Ok(Some(body)) => (StatusCode::OK, Json(body)).into_response(),
+        Ok(None) => StatusCode::OK.into_response(),
+        Err(err) => {
+            error!("Error during request handling: {err:#}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
-
-    StatusCode::OK
 }
 
-async fn handle_request(request: serde_json::Value) -> anyhow::Result<()> {
-    let Ok(message) = serde_json::from_value::<UpdateMessage>(request) else {
+async fn handle_request(request: serde_json::Value) -> anyhow::Result<Option<WebhookResponse>> {
+    let Ok(UpdateMessage {
+        update_id: _,
+        message,
+    }) = serde_json::from_value::<UpdateMessage>(request)
+    else {
         info!("Failed to parse message. Skipping");
-        return Ok(());
+        return Ok(None);
+    };
+    let Some(message) = message else {
+        info!("Missing message object in request. Skipping");
+        return Ok(None);
     };
 
-    Ok(())
+    Ok(Some(WebhookResponse {
+        method: "sendMessage".to_string(),
+        params: serde_json::json!({
+            "chat_id": message.chat.id,
+            "text": "Кто выпустил псину? Кто? Кто? Кто?",
+            "reply_markup": InlineKeyboardMarkup {
+                inline_keyboard: vec![InlineKeyboardButton {
+                    text: "Отправить сообщение".to_string(),
+                    callback_data: CallbackData::ActionSend,
+                }]
+            }
+        }),
+    }))
 }

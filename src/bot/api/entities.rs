@@ -9,6 +9,13 @@ pub struct UpdateMessage {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct WebhookResponse {
+    pub method: String,
+    #[serde(flatten)]
+    pub params: serde_json::Value,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct Message {
     pub message_id: i32,
     pub from: Option<User>,
@@ -51,13 +58,13 @@ pub struct CallbackQuery {
 
 #[derive(Serialize, Deserialize)]
 pub struct InlineKeyboardMarkup {
-    inline_keyboard: Vec<InlineKeyboardButton>,
+    pub inline_keyboard: Vec<InlineKeyboardButton>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct InlineKeyboardButton {
-    text: String,
-    callback_data: CallbackData,
+    pub text: String,
+    pub callback_data: CallbackData,
 }
 
 #[derive(Serialize, Deserialize)]
