@@ -16,9 +16,9 @@ pub fn init(config: &Config) -> anyhow::Result<GlobalLoggerGuard> {
     let term_drain = config.log.term.then(|| {
         let decorator = TermDecorator::new().build();
 
-        let drain = FullFormat::new(decorator)
+        FullFormat::new(decorator)
             .use_custom_timestamp(local_timestamp)
-            .build();
+            .build()
     });
 
     let file_drain = if let Some(ref log_file) = config.log.file {
@@ -44,7 +44,11 @@ pub fn init(config: &Config) -> anyhow::Result<GlobalLoggerGuard> {
         None
     };
 
-    let drain = LevelFilter(Duplicate(drain, Optional(file_drain)), config.log.level).fuse();
+    let drain = LevelFilter(
+        Duplicate(Optional(term_drain), Optional(file_drain)),
+        config.log.level,
+    )
+    .fuse();
     let drain = Async::new(drain).build().fuse();
 
     let logger = Logger::root(drain, o!());
