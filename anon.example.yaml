@@ -1,0 +1,11 @@
+auth:
+  bot_token: <your-token>
+  api_token: <your-token>
+
+http:
+  port: 8080
+
+log:
+  term: false
+  level: DEBUG
+  file: /var/log/anon/anon.log
