@@ -35,6 +35,7 @@ pub struct HttpConfig {
 
 #[derive(Deserialize)]
 pub struct LoggingConfig {
+    pub term: bool,
     #[serde(deserialize_with = "deserialize_level")]
     pub level: Level,
     pub file: Option<PathBuf>,

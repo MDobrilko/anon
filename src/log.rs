@@ -13,10 +13,13 @@ use std::fs::OpenOptions;
 use crate::config::Config;
 
 pub fn init(config: &Config) -> anyhow::Result<GlobalLoggerGuard> {
-    let decorator = TermDecorator::new().build();
-    let drain = FullFormat::new(decorator)
-        .use_custom_timestamp(local_timestamp)
-        .build();
+    let term_drain = config.log.term.then(|| {
+        let decorator = TermDecorator::new().build();
+
+        let drain = FullFormat::new(decorator)
+            .use_custom_timestamp(local_timestamp)
+            .build();
+    });
 
     let file_drain = if let Some(ref log_file) = config.log.file {
         anyhow::ensure!(
