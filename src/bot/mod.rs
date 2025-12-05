@@ -15,6 +15,19 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 mod api;
+mod client;
+
+pub fn setup(config: Config) -> anyhow::Result<()> {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?
+        .block_on(async move {
+            let tg_client = client::Client::new(&config)?;
+            tg_client.setup(&config).await?;
+
+            Ok(())
+        })
+}
 
 pub fn start(config: Config) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()

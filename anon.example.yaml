@@ -3,6 +3,7 @@ auth:
   api_token: <your-token>
 
 http:
+  public_ip: 0.0.0.0
   port: 8080
 
 log:

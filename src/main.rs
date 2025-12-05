@@ -18,7 +18,7 @@ fn main() -> anyhow::Result<()> {
     let _global_logger = log::init(&config)?;
 
     match args.command {
-        Some(Command::Setup) => todo!(),
+        Some(Command::Setup) => bot::setup(config)?,
         Some(Command::Run) | None => bot::start(config)?,
     }
 

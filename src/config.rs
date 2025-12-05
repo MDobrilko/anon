@@ -37,6 +37,7 @@ pub struct TlsConfig {
 
 #[derive(Deserialize, Debug)]
 pub struct HttpConfig {
+    pub public_ip: String,
     pub port: u16,
 }
 
