@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
     routing::post,
 };
+use uuid::Uuid;
 
 use crate::{
     bot::api::{
@@ -15,7 +16,7 @@ use crate::{
         },
         headers::ApiSecretToken,
     },
-    log::{debug, error, info},
+    log::{FutureExt, debug, error, info, logger, o},
     state::AppState,
 };
 
@@ -47,7 +48,10 @@ pub async fn update(
         return StatusCode::BAD_REQUEST.into_response();
     }
 
-    match handle_request(request).await {
+    match handle_request(request)
+        .with_logger(logger().new(o!("uuid" => Uuid::new_v4().to_string())))
+        .await
+    {
         Ok(Some(body)) => (StatusCode::OK, Json(body)).into_response(),
         Ok(None) => StatusCode::OK.into_response(),
         Err(err) => {
