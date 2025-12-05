@@ -1,5 +1,17 @@
-use crate::{config::Config, log::error, state::AppState};
+use std::net::SocketAddr;
 
+use crate::{
+    config::Config,
+    log::{debug, error, info},
+    state::AppState,
+};
+
+use axum_server::tls_rustls::RustlsConfig;
+use futures::future::TryFutureExt;
+use tokio::{
+    signal::unix::{SignalKind, signal},
+    sync::mpsc::Receiver,
+};
 use tokio_util::sync::CancellationToken;
 
 mod api;
@@ -8,31 +20,65 @@ pub fn start(config: Config) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?
-        .block_on(start_app(config))
+        .block_on(run_app(config))
 }
 
-async fn start_app(config: Config) -> anyhow::Result<()> {
+async fn run_app(config: Config) -> anyhow::Result<()> {
     let state = AppState::new(config);
 
-    spawn_shutdown_signal_watcher(state.cancellation_token().clone());
+    let mut web_handle = tokio::spawn(run_server(state.clone())).map_err(anyhow::Error::from);
+    let mut shutdown_rx = spawn_shutdown_signal_watcher(state.cancellation_token().clone())?;
 
-    run_server(state).await
+    tokio::select! {
+        biased;
+        _ = &mut web_handle => {},
+        _ = shutdown_rx.recv() => {},
+    }
+
+    state.cancellation_token().cancel();
+
+    tokio::select! {
+        biased;
+        res = web_handle => { res? },
+        _ = shutdown_rx.recv() => { info!("Terminating"); Ok(()) },
+    }
 }
 
-fn spawn_shutdown_signal_watcher(ct: CancellationToken) {
+fn spawn_shutdown_signal_watcher(ct: CancellationToken) -> anyhow::Result<Receiver<()>> {
+    let mut interrupt = signal(SignalKind::interrupt())?;
+    let mut terminate = signal(SignalKind::terminate())?;
+
+    let (sender, receiver) = tokio::sync::mpsc::channel(2);
+
     tokio::spawn(async move {
-        if let Err(err) = tokio::signal::ctrl_c().await {
-            error!("Failed to receive ctrl+c signal: {err:#}");
+        loop {
+            tokio::select! {
+                _ = interrupt.recv() => {},
+                _ = terminate.recv() => {},
+                _ = ct.cancelled() => break,
+            }
+
+            info!("Shutting down");
+            if let Err(err) = sender.send(()).await {
+                error!("Failed to send shutdown signal: {err}");
+            }
         }
-        ct.cancel();
     });
+
+    Ok(receiver)
 }
 
 async fn run_server(state: AppState) -> anyhow::Result<()> {
-    let listener = tokio::net::TcpListener::bind(("0.0.0.0", state.config().http.port)).await?;
+    info!("Starting ...");
+    debug!("Run server with config: {:#?}", state.config());
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], state.config().http.port));
+    let tls_config =
+        RustlsConfig::from_pem_file(&state.config().auth.tls.cert, &state.config().auth.tls.key)
+            .await?;
 
     tokio::select! {
-        res = axum::serve(listener, api::make_router(state.clone())) => res,
+        res = axum_server::bind_rustls(addr, tls_config).serve(api::make_router(state.clone()).into_make_service()) => res,
         _ = state.cancellation_token().cancelled() => Ok(())
     }?;
 

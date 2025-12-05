@@ -23,7 +23,7 @@ pub fn init(config: &Config) -> anyhow::Result<GlobalLoggerGuard> {
 
     let file_drain = if let Some(ref log_file) = config.log.file {
         anyhow::ensure!(
-            !log_file.exists() && log_file.is_file(),
+            !log_file.exists() || log_file.is_file(),
             "Log file must be a file"
         );
 

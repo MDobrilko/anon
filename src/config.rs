@@ -4,7 +4,7 @@ use serde::{Deserialize, Deserializer};
 use slog::Level;
 use std::{path::PathBuf, str::FromStr};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct Config {
     pub auth: AuthConfig,
     pub http: HttpConfig,
@@ -22,18 +22,25 @@ impl Config {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct AuthConfig {
     pub bot_token: String,
     pub api_token: Option<String>,
+    pub tls: TlsConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
+pub struct TlsConfig {
+    pub cert: PathBuf,
+    pub key: PathBuf,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct HttpConfig {
     pub port: u16,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct LoggingConfig {
     pub term: bool,
     #[serde(deserialize_with = "deserialize_level")]
