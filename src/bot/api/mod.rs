@@ -65,16 +65,19 @@ async fn handle_request(
 ) -> anyhow::Result<Option<WebhookResponse>> {
     debug!("Got new request: {request:#?}");
 
-    let Ok(parsed_request) = serde_json::from_value::<UpdateMessage>(request) else {
-        info!("Failed to parse message. Skipping");
-        return Ok(None);
+    let parsed_request = match serde_json::from_value::<UpdateMessage>(request) {
+        Ok(req) => req,
+        Err(err) => {
+            info!("Failed to parse message: {err}. Skipping");
+            return Ok(None);
+        }
     };
 
     if let Some(message) = parsed_request.message.as_ref() {
         handle_message(state, message).await?;
     };
     if let Some(callback_query) = parsed_request.callback_query.as_ref() {
-        handle_send_message_button_click(state, callback_query).await;
+        handle_send_message_button_click(state, callback_query).await?;
     }
 
     Ok(None)
