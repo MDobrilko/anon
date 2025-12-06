@@ -1,5 +1,5 @@
 use anyhow::Context;
-use reqwest::{Client as HttpClient, Url};
+use reqwest::{Client as HttpClient, Url, multipart::Form};
 
 use crate::config::Config;
 
@@ -27,14 +27,28 @@ impl Client {
             .join("setWebhook")
             .context("Failed to create setup url")?;
 
+        let mut body = Form::new()
+            .text(
+                "url",
+                format!(
+                    "https://{}:{}/update",
+                    config.http.public_ip, config.http.port
+                ),
+            )
+            .file("certificate", &config.http.tls.cert)
+            .await?;
+
+        if let Some(api_token) = config.auth.api_token.clone() {
+            body = body.text("secret_token", api_token);
+        }
+
         self.http_client
             .post(url)
-            .json(&serde_json::json!({
-                "url": format!("https://{}:{}/update", config.http.public_ip, config.http.port),
-                "secret_token": config.auth.api_token,
-            }))
+            .multipart(body)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
+
         Ok(())
     }
 }
