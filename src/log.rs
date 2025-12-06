@@ -1,6 +1,6 @@
 use anyhow::Context;
 pub use slog::o;
-pub use slog_scope::{debug, error, info, logger, trace, warn};
+pub use slog_scope::{debug, error, info, logger};
 pub use slog_scope_futures::FutureExt;
 
 use chrono::format::{Fixed, Item, Numeric, Pad};

@@ -10,6 +10,5 @@ http:
     key: <path-to-key-file>
 
 log:
-  term: false
+  term: true
   level: DEBUG
-  file: /var/log/anon/anon.log

@@ -7,7 +7,7 @@ use crate::{
 };
 
 use axum_server::tls_rustls::RustlsConfig;
-use futures::future::TryFutureExt;
+use futures::future::FutureExt;
 use tokio::{
     signal::unix::{SignalKind, signal},
     sync::mpsc::Receiver,
@@ -39,7 +39,7 @@ pub fn start(config: Config) -> anyhow::Result<()> {
 async fn run_app(config: Config) -> anyhow::Result<()> {
     let state = AppState::new(config);
 
-    let mut web_handle = tokio::spawn(run_server(state.clone())).map_err(anyhow::Error::from);
+    let mut web_handle = tokio::spawn(run_server(state.clone())).fuse();
     let mut shutdown_rx = spawn_shutdown_signal_watcher(state.cancellation_token().clone())?;
 
     tokio::select! {
