@@ -14,7 +14,7 @@ use crate::config::Config;
 
 pub fn init(config: &Config) -> anyhow::Result<GlobalLoggerGuard> {
     let term_drain = config.log.term.then(|| {
-        let decorator = TermDecorator::new().build();
+        let decorator = TermDecorator::new().stdout().build();
 
         FullFormat::new(decorator)
             .use_custom_timestamp(local_timestamp)
