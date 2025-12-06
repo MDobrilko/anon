@@ -26,6 +26,12 @@ impl Config {
 pub struct AuthConfig {
     pub bot_token: String,
     pub api_token: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct HttpConfig {
+    pub public_ip: String,
+    pub port: u16,
     pub tls: TlsConfig,
 }
 
@@ -33,12 +39,6 @@ pub struct AuthConfig {
 pub struct TlsConfig {
     pub cert: PathBuf,
     pub key: PathBuf,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct HttpConfig {
-    pub public_ip: String,
-    pub port: u16,
 }
 
 #[derive(Deserialize, Debug)]

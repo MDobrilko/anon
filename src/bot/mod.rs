@@ -87,7 +87,7 @@ async fn run_server(state: AppState) -> anyhow::Result<()> {
 
     let addr = SocketAddr::from(([0, 0, 0, 0], state.config().http.port));
     let tls_config =
-        RustlsConfig::from_pem_file(&state.config().auth.tls.cert, &state.config().auth.tls.key)
+        RustlsConfig::from_pem_file(&state.config().http.tls.cert, &state.config().http.tls.key)
             .await?;
 
     tokio::select! {
