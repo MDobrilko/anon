@@ -2,20 +2,20 @@ use serde::{Deserialize, Serialize};
 
 pub type ChatId = i64;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateMessage {
     pub update_id: i32,
     pub message: Option<Message>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WebhookResponse {
     pub method: String,
     #[serde(flatten)]
     pub params: serde_json::Value,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
     pub message_id: i32,
     pub from: Option<User>,
@@ -25,13 +25,13 @@ pub struct Message {
     pub callback_query: Option<CallbackQuery>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: i32,
     pub is_bot: bool,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Chat {
     pub id: ChatId,
     #[serde(rename = "type")]
@@ -39,7 +39,7 @@ pub struct Chat {
     pub title: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ChatType {
     Private,
@@ -48,7 +48,7 @@ pub enum ChatType {
     Channel,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CallbackQuery {
     pub id: String,
     pub from: User,
@@ -56,18 +56,18 @@ pub struct CallbackQuery {
     pub data: Option<CallbackData>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InlineKeyboardMarkup {
     pub inline_keyboard: Vec<InlineKeyboardButton>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InlineKeyboardButton {
     pub text: String,
     pub callback_data: CallbackData,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum CallbackData {
     ActionSend,
 }

@@ -35,8 +35,6 @@ pub async fn update(
     api_token: Option<ApiSecretToken>,
     Json(request): Json<serde_json::Value>,
 ) -> Response<Body> {
-    debug!("Got new request: {request:#?}");
-
     if state
         .config()
         .auth
@@ -62,6 +60,8 @@ pub async fn update(
 }
 
 async fn handle_request(request: serde_json::Value) -> anyhow::Result<Option<WebhookResponse>> {
+    debug!("Got new request: {request:#?}");
+
     let Ok(UpdateMessage {
         update_id: _,
         message,
@@ -75,7 +75,7 @@ async fn handle_request(request: serde_json::Value) -> anyhow::Result<Option<Web
         return Ok(None);
     };
 
-    Ok(Some(WebhookResponse {
+    let response = WebhookResponse {
         method: "sendMessage".to_string(),
         params: serde_json::json!({
             "chat_id": message.chat.id,
@@ -87,5 +87,9 @@ async fn handle_request(request: serde_json::Value) -> anyhow::Result<Option<Web
                 }]
             }
         }),
-    }))
+    };
+
+    debug!("Sending response: {response:#?}");
+
+    Ok(Some(response))
 }
