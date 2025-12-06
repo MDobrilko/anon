@@ -58,7 +58,7 @@ pub struct CallbackQuery {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InlineKeyboardMarkup {
-    pub inline_keyboard: Vec<InlineKeyboardButton>,
+    pub inline_keyboard: Vec<Vec<InlineKeyboardButton>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

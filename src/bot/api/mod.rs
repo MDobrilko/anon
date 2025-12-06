@@ -82,10 +82,10 @@ async fn handle_request(
         "chat_id": message.chat.id,
         "text": "Кто выпустил псину? Кто? Кто? Кто?",
         "reply_markup": InlineKeyboardMarkup {
-            inline_keyboard: vec![InlineKeyboardButton {
+            inline_keyboard: vec![vec![InlineKeyboardButton {
                 text: "Отправить сообщение".to_string(),
                 callback_data: CallbackData::ActionSend,
-            }]
+            }]]
         }
     });
 
@@ -93,7 +93,9 @@ async fn handle_request(
     //     method: "sendMessage".to_string(),
     //     params: payload,
     // };
-    state.tg_client().send_message(&payload).await?;
+    if let Err(err) = state.tg_client().send_message(&payload).await {
+        error!("Error sending message to client: {err}");
+    }
 
     Ok(None)
 }
