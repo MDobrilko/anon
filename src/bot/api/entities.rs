@@ -28,7 +28,7 @@ pub struct Message {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
-    pub id: i32,
+    pub id: i64,
     pub is_bot: bool,
     pub username: Option<String>,
 }
