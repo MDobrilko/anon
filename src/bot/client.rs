@@ -1,7 +1,7 @@
 use anyhow::Context;
 use reqwest::{Client as HttpClient, Url, multipart::Form};
 
-use crate::config::Config;
+use crate::{config::Config, log::error};
 
 pub struct Client {
     base_url: Url,
@@ -42,12 +42,17 @@ impl Client {
             body = body.text("secret_token", api_token);
         }
 
-        self.http_client
-            .post(url)
-            .multipart(body)
-            .send()
-            .await?
-            .error_for_status()?;
+        let response = self.http_client.post(url).multipart(body).send().await?;
+
+        if let Err(err) = response.error_for_status_ref() {
+            let resp_body = response.text().await.ok();
+            error!(
+                "Setup request failed: {}",
+                resp_body.as_deref().unwrap_or("N/A")
+            );
+
+            return Err(err.into());
+        }
 
         Ok(())
     }
