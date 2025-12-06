@@ -4,7 +4,7 @@ pub type ChatId = i64;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateMessage {
-    pub update_id: i32,
+    pub update_id: i64,
     pub message: Option<Message>,
     pub callback_query: Option<CallbackQuery>,
 }
