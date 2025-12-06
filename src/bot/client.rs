@@ -56,4 +56,25 @@ impl Client {
 
         Ok(())
     }
+
+    pub async fn send_message(&self, payload: &impl serde::Serialize) -> anyhow::Result<()> {
+        let url = self
+            .base_url
+            .join("sendMessage")
+            .context("Failed to create sendMessage url")?;
+
+        let response = self.http_client.post(url).json(payload).send().await?;
+
+        if let Err(err) = response.error_for_status_ref() {
+            let resp_body = response.text().await.ok();
+            error!(
+                "Send message request failed: {}",
+                resp_body.as_deref().unwrap_or("N/A")
+            );
+
+            return Err(err.into());
+        }
+
+        Ok(())
+    }
 }

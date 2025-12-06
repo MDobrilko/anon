@@ -46,7 +46,7 @@ pub async fn update(
         return StatusCode::BAD_REQUEST.into_response();
     }
 
-    match handle_request(request)
+    match handle_request(&state, request)
         .with_logger(logger().new(o!("uuid" => Uuid::new_v4().to_string())))
         .await
     {
@@ -59,7 +59,10 @@ pub async fn update(
     }
 }
 
-async fn handle_request(request: serde_json::Value) -> anyhow::Result<Option<WebhookResponse>> {
+async fn handle_request(
+    state: &AppState,
+    request: serde_json::Value,
+) -> anyhow::Result<Option<WebhookResponse>> {
     debug!("Got new request: {request:#?}");
 
     let Ok(UpdateMessage {
@@ -75,21 +78,22 @@ async fn handle_request(request: serde_json::Value) -> anyhow::Result<Option<Web
         return Ok(None);
     };
 
-    let response = WebhookResponse {
-        method: "sendMessage".to_string(),
-        params: serde_json::json!({
-            "chat_id": message.chat.id,
-            "text": "Кто выпустил псину? Кто? Кто? Кто?",
-            "reply_markup": InlineKeyboardMarkup {
-                inline_keyboard: vec![InlineKeyboardButton {
-                    text: "Отправить сообщение".to_string(),
-                    callback_data: CallbackData::ActionSend,
-                }]
-            }
-        }),
-    };
+    let payload = serde_json::json!({
+        "chat_id": message.chat.id,
+        "text": "Кто выпустил псину? Кто? Кто? Кто?",
+        "reply_markup": InlineKeyboardMarkup {
+            inline_keyboard: vec![InlineKeyboardButton {
+                text: "Отправить сообщение".to_string(),
+                callback_data: CallbackData::ActionSend,
+            }]
+        }
+    });
 
-    debug!("Sending response: {response:#?}");
+    // let response = WebhookResponse {
+    //     method: "sendMessage".to_string(),
+    //     params: payload,
+    // };
+    state.tg_client().send_message(&payload).await?;
 
-    Ok(Some(response))
+    Ok(None)
 }

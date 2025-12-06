@@ -15,7 +15,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 
 mod api;
-mod client;
+pub mod client;
 
 pub fn setup(config: Config) -> anyhow::Result<()> {
     tokio::runtime::Builder::new_current_thread()
@@ -37,7 +37,7 @@ pub fn start(config: Config) -> anyhow::Result<()> {
 }
 
 async fn run_app(config: Config) -> anyhow::Result<()> {
-    let state = AppState::new(config);
+    let state = AppState::new(config)?;
 
     let mut web_handle = tokio::spawn(run_server(state.clone())).fuse();
     let mut shutdown_rx = spawn_shutdown_signal_watcher(state.cancellation_token().clone())?;
