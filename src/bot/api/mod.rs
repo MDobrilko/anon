@@ -11,8 +11,8 @@ use uuid::Uuid;
 use crate::{
     bot::api::{
         entities::{
-            CallbackData, InlineKeyboardButton, InlineKeyboardMarkup, UpdateMessage,
-            WebhookResponse,
+            CallbackData, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message,
+            UpdateMessage, WebhookResponse,
         },
         headers::ApiSecretToken,
     },
@@ -65,18 +65,29 @@ async fn handle_request(
 ) -> anyhow::Result<Option<WebhookResponse>> {
     debug!("Got new request: {request:#?}");
 
-    let Ok(UpdateMessage {
-        update_id: _,
-        message,
-    }) = serde_json::from_value::<UpdateMessage>(request)
-    else {
+    let Ok(parsed_request) = serde_json::from_value::<UpdateMessage>(request) else {
         info!("Failed to parse message. Skipping");
         return Ok(None);
     };
-    let Some(message) = message else {
-        info!("Missing message object in request. Skipping");
-        return Ok(None);
+
+    if let Some(message) = parsed_request.message.as_ref() {
+        handle_message(state, message).await?;
     };
+    if let Some(callback_query) = parsed_request.callback_query.as_ref() {
+        handle_send_message_button_click(state, callback_query).await;
+    }
+
+    Ok(None)
+}
+
+async fn handle_message(state: &AppState, message: &Message) -> anyhow::Result<()> {
+    if message
+        .text
+        .as_deref()
+        .is_none_or(|t| t.trim() != "bot ping")
+    {
+        return Ok(());
+    }
 
     let payload = serde_json::json!({
         "chat_id": message.chat.id,
@@ -97,5 +108,27 @@ async fn handle_request(
         error!("Error sending message to client: {err}");
     }
 
-    Ok(None)
+    Ok(())
+}
+
+async fn handle_send_message_button_click(
+    state: &AppState,
+    query: &CallbackQuery,
+) -> anyhow::Result<()> {
+    let Some(username) = query.from.username.as_deref() else {
+        return Ok(());
+    };
+    let Some(message) = query.message.as_deref() else {
+        return Ok(());
+    };
+
+    let payload = serde_json::json!({
+        "chat_id": message.chat.id,
+        "text": format!("@{username} куда хватаешь?"),
+    });
+    if let Err(err) = state.tg_client().send_message(&payload).await {
+        error!("Error sending message to client: {err}");
+    }
+
+    Ok(())
 }

@@ -6,6 +6,7 @@ pub type ChatId = i64;
 pub struct UpdateMessage {
     pub update_id: i32,
     pub message: Option<Message>,
+    pub callback_query: Option<CallbackQuery>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,6 +30,7 @@ pub struct Message {
 pub struct User {
     pub id: i32,
     pub is_bot: bool,
+    pub username: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
