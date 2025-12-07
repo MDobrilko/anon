@@ -109,6 +109,9 @@ async fn handle_send_command(state: &AppState, message: &Message) -> anyhow::Res
         }
         _ => {
             let added = state.chats().add_user_chat(user.id, &message.chat).await;
+            if added {
+                state.save_chats().await?;
+            }
 
             let tagged_username = user
                 .username
