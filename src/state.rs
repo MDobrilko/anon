@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use anyhow::Context;
 use tokio::sync::RwLock;
@@ -14,13 +14,16 @@ impl AppState {
         let tg_client = TelegramClient::new(&config)?;
         let chats = Chats::open(&config.chats_storage)
             .await
-            .context("Failed to create chats")?;
+            .context("Failed to open chats storage")?;
+        let user_chats = open_user_chats(&config.user_chats_storage)
+            .await
+            .context("Failed to open user chats storage")?;
 
         Ok(Self(Arc::new(AppStateInner {
             config,
             tg_client,
             chats,
-            user_letters: RwLock::new(HashMap::new()),
+            user_chats,
             cancellation_token: CancellationToken::new(),
         })))
     }
@@ -41,8 +44,15 @@ impl AppState {
         self.0.chats.save(&self.0.config.chats_storage).await
     }
 
-    pub fn user_letters(&self) -> &RwLock<HashMap<i64, i64>> {
-        &self.0.user_letters
+    pub fn user_chats(&self) -> &RwLock<HashMap<i64, i64>> {
+        &self.0.user_chats
+    }
+
+    pub async fn save_user_chats(&self) -> anyhow::Result<()> {
+        let contents = { serde_json::to_vec_pretty(&*self.0.user_chats.read().await) }?;
+        tokio::fs::write(&self.config().user_chats_storage, contents).await?;
+
+        Ok(())
     }
 
     pub fn cancellation_token(&self) -> &CancellationToken {
@@ -54,6 +64,20 @@ struct AppStateInner {
     config: Config,
     tg_client: TelegramClient,
     chats: Chats,
-    user_letters: RwLock<HashMap<i64, i64>>,
+    user_chats: RwLock<HashMap<i64, i64>>,
     cancellation_token: CancellationToken,
+}
+
+async fn open_user_chats(file: &Path) -> anyhow::Result<RwLock<HashMap<i64, i64>>> {
+    if !file.exists() {
+        return Ok(RwLock::new(HashMap::new()));
+    }
+
+    let contents = tokio::fs::read(file)
+        .await
+        .context("Failed to open user chats storage file")?;
+
+    let user_chats = serde_json::from_slice(&contents)?;
+
+    Ok(RwLock::new(user_chats))
 }

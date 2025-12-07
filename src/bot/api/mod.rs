@@ -147,7 +147,7 @@ async fn handle_text_message(state: &AppState, message: &Message) -> anyhow::Res
         return Ok(());
     };
 
-    let target_chat_id = { state.user_letters().read().await.get(&user.id).copied() };
+    let target_chat_id = { state.user_chats().read().await.get(&user.id).copied() };
 
     match target_chat_id {
         Some(chat_id) => resend_message_anonimously(state, message, chat_id).await,
@@ -245,7 +245,7 @@ async fn handle_chat_button_clicked(
 ) -> anyhow::Result<()> {
     {
         state
-            .user_letters()
+            .user_chats()
             .write()
             .await
             .entry(query.from.id)

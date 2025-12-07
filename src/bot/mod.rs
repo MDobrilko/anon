@@ -8,7 +8,7 @@ use crate::{
 
 use anyhow::Context;
 use axum_server::tls_rustls::RustlsConfig;
-use futures::future::maybe_done;
+use futures::{FutureExt, future::maybe_done};
 use sd_notify::{NotifyState, notify};
 use tokio::{
     signal::unix::{SignalKind, signal},
@@ -45,7 +45,17 @@ async fn run_app(config: Config) -> anyhow::Result<()> {
         .await
         .context("Failed to create app state")?;
 
-    let mut web_handle = std::pin::pin!(maybe_done(tokio::spawn(run_server(state.clone()))));
+    let web_handle = {
+        let state = state.clone();
+        let handle = run_server(state.clone()).then(|web_result| async move {
+            let save_user_chats_result = state.save_user_chats().await;
+
+            web_result.or(save_user_chats_result)
+        });
+
+        maybe_done(tokio::spawn(handle))
+    };
+    let mut web_handle = std::pin::pin!(web_handle);
     let mut shutdown_rx = spawn_shutdown_signal_watcher(state.cancellation_token().clone())?;
 
     notify(true, &[NotifyState::Ready])?;

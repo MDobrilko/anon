@@ -10,6 +10,7 @@ pub struct Config {
     pub http: HttpConfig,
     pub log: LoggingConfig,
     pub chats_storage: PathBuf,
+    pub user_chats_storage: PathBuf,
 }
 
 impl Config {
