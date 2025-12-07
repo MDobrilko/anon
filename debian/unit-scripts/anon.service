@@ -1,0 +1,21 @@
+[Unit]
+Description=ANON - Telegram bot for sending anonimous message to chats
+Documentation=anon -- help
+After=network.target
+
+[Service]
+Type=notify
+User=root
+Group=root
+UMask=0027
+StandardOutput=journal
+StandardError=inherit
+SyslogFacility=local1
+ExecStart=/usr/sbin/anon --config /etc/anon/anon.yaml run
+ExecReloads=/usr/sbin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+PrivateDevices=yes
+
+[Install]
+WantedBy=multi-user.target
