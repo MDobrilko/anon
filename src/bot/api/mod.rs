@@ -179,6 +179,7 @@ async fn resend_message_anonimously(
             .send_photo(SendPhotoPayload {
                 chat_id: target_chat_id,
                 photo: file_id,
+                caption: message.caption.as_deref(),
             })
             .await;
     }

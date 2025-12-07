@@ -24,6 +24,7 @@ pub struct Message {
     pub text: Option<String>,
     pub date: i32,
     pub photo: Option<Vec<PhotoSize>>,
+    pub caption: Option<String>,
     pub callback_query: Option<CallbackQuery>,
 }
 
@@ -91,6 +92,7 @@ pub enum CallbackData {
 pub struct SendPhotoPayload<'a> {
     pub chat_id: i64,
     pub photo: &'a str,
+    pub caption: Option<&'a str>,
 }
 
 mod callback_data_as_string {
