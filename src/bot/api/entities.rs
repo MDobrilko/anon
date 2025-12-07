@@ -24,6 +24,7 @@ pub struct Message {
     pub text: Option<String>,
     pub date: i32,
     pub photo: Option<Vec<PhotoSize>>,
+    pub animation: Option<Animation>,
     pub caption: Option<String>,
     pub callback_query: Option<CallbackQuery>,
 }
@@ -62,6 +63,15 @@ pub struct PhotoSize {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Animation {
+    pub file_id: String,
+    pub file_unique_id: String,
+    pub width: i64,
+    pub height: i64,
+    pub duration: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CallbackQuery {
     pub id: String,
     pub from: User,
@@ -93,6 +103,16 @@ pub struct SendPhotoPayload<'a> {
     pub chat_id: i64,
     pub photo: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub caption: Option<&'a str>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SendAnimationPayload<'a> {
+    pub chat_id: i64,
+    pub animation: &'a str,
+    pub duration: Option<i64>,
+    pub width: Option<i64>,
+    pub height: Option<i64>,
     pub caption: Option<&'a str>,
 }
 

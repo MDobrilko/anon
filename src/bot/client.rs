@@ -1,7 +1,11 @@
 use anyhow::Context;
 use reqwest::{Client as HttpClient, Response, Url, multipart::Form};
 
-use crate::{bot::entities::SendPhotoPayload, config::Config, log::error};
+use crate::{
+    bot::entities::{SendAnimationPayload, SendPhotoPayload},
+    config::Config,
+    log::error,
+};
 
 pub struct Client {
     base_url: Url,
@@ -64,6 +68,11 @@ impl Client {
 
     pub async fn send_photo(&self, payload: SendPhotoPayload<'_>) {
         self.send_silent_json_request("sendPhoto", Some(&payload))
+            .await;
+    }
+
+    pub async fn send_animation(&self, payload: SendAnimationPayload<'_>) {
+        self.send_silent_json_request("sendAnimation", Some(&payload))
             .await;
     }
 

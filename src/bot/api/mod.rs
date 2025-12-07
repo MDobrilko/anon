@@ -17,7 +17,7 @@ use crate::{
             },
             headers::ApiSecretToken,
         },
-        entities::SendPhotoPayload,
+        entities::{SendAnimationPayload, SendPhotoPayload},
     },
     log::{FutureExt, debug, error, info, logger, o},
     state::AppState,
@@ -179,6 +179,20 @@ async fn resend_message_anonimously(
             .send_photo(SendPhotoPayload {
                 chat_id: target_chat_id,
                 photo: file_id,
+                caption: message.caption.as_deref(),
+            })
+            .await;
+    }
+
+    if let Some(animation) = message.animation.as_ref() {
+        state
+            .tg_client()
+            .send_animation(SendAnimationPayload {
+                chat_id: target_chat_id,
+                animation: animation.file_id.as_ref(),
+                duration: Some(animation.duration),
+                width: Some(animation.width),
+                height: Some(animation.height),
                 caption: message.caption.as_deref(),
             })
             .await;
