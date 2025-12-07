@@ -99,21 +99,24 @@ pub enum CallbackData {
 }
 
 #[derive(Debug, Serialize)]
-#[serde_with::skip_serializing_none]
 pub struct SendPhotoPayload<'a> {
     pub chat_id: i64,
     pub photo: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub caption: Option<&'a str>,
 }
 
 #[derive(Debug, Serialize)]
-#[serde_with::skip_serializing_none]
 pub struct SendAnimationPayload<'a> {
     pub chat_id: i64,
     pub animation: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub width: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub caption: Option<&'a str>,
 }
 
