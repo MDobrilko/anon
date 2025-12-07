@@ -55,6 +55,7 @@ pub struct CallbackQuery {
     pub id: String,
     pub from: User,
     pub message: Option<Box<Message>>, // This is MaybeInaccessibleMessage in docs but for now it's fields are almost common with regular
+    #[serde(with = "callback_data_as_string_opt")]
     pub data: Option<CallbackData>,
 }
 
@@ -77,7 +78,7 @@ pub enum CallbackData {
 }
 
 mod callback_data_as_string {
-    use serde::{Deserializer, Serializer, de::Visitor};
+    use serde::{Deserializer, Serializer, de::Visitor, ser::Error as _};
 
     use super::CallbackData;
 
@@ -85,12 +86,11 @@ mod callback_data_as_string {
         callback_data: &CallbackData,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        let serialized = match callback_data {
-            CallbackData::ActionSend => "ActionSend".to_string(),
-            CallbackData::SendTo(target) => target.to_string(),
-        };
-
-        serializer.serialize_str(&serialized)
+        serializer.serialize_str(
+            &serde_json::to_string(callback_data).map_err(|err| {
+                S::Error::custom(format!("Failed to serialize callback data: {err}"))
+            })?,
+        )
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>>(
@@ -109,16 +109,65 @@ mod callback_data_as_string {
             where
                 E: serde::de::Error,
             {
-                if v == "ActionSend" {
-                    return Ok(CallbackData::ActionSend);
-                }
-
-                v.parse::<i64>().map(CallbackData::SendTo).map_err(|err| {
-                    E::custom(format!("Failed to parse callback data as send to: {err}"))
-                })
+                serde_json::from_str(v)
+                    .map_err(|err| E::custom(format!("Failed to deserialize callback data: {err}")))
             }
         }
 
         deserializer.deserialize_string(StrVisitor)
+    }
+}
+
+mod callback_data_as_string_opt {
+    use serde::{Deserializer, Serializer, de::Visitor};
+
+    use super::CallbackData;
+
+    pub fn serialize<S: Serializer>(
+        callback_data: &Option<CallbackData>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        match callback_data.as_ref() {
+            Some(data) => super::callback_data_as_string::serialize(data, serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<Option<CallbackData>, D::Error> {
+        struct OptStrVisitor;
+
+        impl<'de> Visitor<'de> for OptStrVisitor {
+            type Value = Option<CallbackData>;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "a string")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Option<CallbackData>, E>
+            where
+                E: serde::de::Error,
+            {
+                serde_json::from_str(v)
+                    .map_err(|err| E::custom(format!("Failed to deserialize callback data: {err}")))
+            }
+
+            fn visit_some<D>(self, deserializer: D) -> Result<Option<CallbackData>, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                super::callback_data_as_string::deserialize(deserializer).map(Some)
+            }
+
+            fn visit_none<E>(self) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(None)
+            }
+        }
+
+        deserializer.deserialize_option(OptStrVisitor)
     }
 }
