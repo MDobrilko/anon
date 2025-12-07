@@ -4,7 +4,7 @@ use reqwest::{Client as HttpClient, Response, Url, multipart::Form};
 use crate::{
     bot::entities::{SendAnimationPayload, SendPhotoPayload},
     config::Config,
-    log::error,
+    log::{debug, error},
 };
 
 pub struct Client {
@@ -112,6 +112,8 @@ impl Client {
 
         let mut request = self.http_client.post(url);
         if let Some(payload) = payload {
+            let body_string = serde_json::to_string_pretty(payload)?;
+            debug!("Calling tg method \"{method}\" with body: {body_string}");
             request = request.json(&payload);
         }
 
