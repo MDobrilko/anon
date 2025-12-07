@@ -1,0 +1,13 @@
+/var/log/anon/anon.log {
+	daily
+	rotate 24
+	olddir /var/log/anon/old/
+	dateext
+	missingok
+	notifempty
+	nocompress
+	sharedscripts
+	postrotate
+		pkill -USR1 anon
+	endscript
+}

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+#DEBHELPER#
+
+mkdir -p /var/log/anon/old
+mkdir -p /etc/anon/

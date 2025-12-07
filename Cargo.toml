@@ -22,3 +22,29 @@ slog-term = "2.9.2"
 tokio = { version = "1.48.0", features = ["full"] }
 tokio-util = "0.7.17"
 uuid = { version = "1.19.0", features = ["v4"] }
+
+[package.metadata.deb]
+name = "anon"
+depends = "$auto, systemd"
+assets = [
+  [
+    "target/release/anon",
+    "usr/sbin/anon",
+    "755",
+  ],
+  [
+    "debian/assets/anon.logrotate",
+    "etc/logrotate.d/anon",
+    "644",
+  ],
+]
+maintainer-scripts = "debian/maintainer-scripts/"
+conf-files = ["etc/logrotate/anon"]
+
+[package.metadata.deb.systemd-units]
+unit-scripts = "debian/unit-scripts/"
+unit-name = "anon"
+enable = false
+start = true
+restart-after-upgrade = false
+stop-on-upgrade = false
