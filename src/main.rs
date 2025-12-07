@@ -6,6 +6,7 @@ use crate::{
 };
 
 mod bot;
+mod chats;
 mod cli;
 mod config;
 mod log;

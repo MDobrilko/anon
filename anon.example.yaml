@@ -12,3 +12,5 @@ http:
 log:
   term: true
   level: DEBUG
+
+chats_storage: /etc/anon/chats.json

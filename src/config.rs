@@ -9,6 +9,7 @@ pub struct Config {
     pub auth: AuthConfig,
     pub http: HttpConfig,
     pub log: LoggingConfig,
+    pub chats_storage: PathBuf,
 }
 
 impl Config {

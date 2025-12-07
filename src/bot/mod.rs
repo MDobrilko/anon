@@ -6,13 +6,16 @@ use crate::{
     state::AppState,
 };
 
+use anyhow::Context;
 use axum_server::tls_rustls::RustlsConfig;
-use futures::future::FutureExt;
+use futures::future::{FutureExt, maybe_done};
 use tokio::{
     signal::unix::{SignalKind, signal},
     sync::mpsc::Receiver,
 };
 use tokio_util::sync::CancellationToken;
+
+pub use api::entities;
 
 mod api;
 pub mod client;
@@ -37,9 +40,11 @@ pub fn start(config: Config) -> anyhow::Result<()> {
 }
 
 async fn run_app(config: Config) -> anyhow::Result<()> {
-    let state = AppState::new(config)?;
+    let state = AppState::new(config)
+        .await
+        .context("Failed to create app state")?;
 
-    let mut web_handle = tokio::spawn(run_server(state.clone())).fuse();
+    let mut web_handle = std::pin::pin!(maybe_done(tokio::spawn(run_server(state.clone()))));
     let mut shutdown_rx = spawn_shutdown_signal_watcher(state.cancellation_token().clone())?;
 
     tokio::select! {
@@ -52,7 +57,12 @@ async fn run_app(config: Config) -> anyhow::Result<()> {
 
     tokio::select! {
         biased;
-        res = web_handle => { res? },
+        _ = &mut web_handle => {
+            match web_handle.take_output() {
+                Some(res) => res?,
+                None => Ok(()),
+            }
+        },
         _ = shutdown_rx.recv() => { info!("Terminating"); Ok(()) },
     }
 }

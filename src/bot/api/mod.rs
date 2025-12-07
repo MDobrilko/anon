@@ -11,8 +11,8 @@ use uuid::Uuid;
 use crate::{
     bot::api::{
         entities::{
-            CallbackData, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message,
-            UpdateMessage, WebhookResponse,
+            CallbackData, CallbackQuery, ChatType, InlineKeyboardButton, InlineKeyboardMarkup,
+            Message, UpdateMessage, WebhookResponse,
         },
         headers::ApiSecretToken,
     },
@@ -20,7 +20,7 @@ use crate::{
     state::AppState,
 };
 
-mod entities;
+pub mod entities;
 mod headers;
 
 pub fn make_router(state: AppState) -> Router {
@@ -29,7 +29,6 @@ pub fn make_router(state: AppState) -> Router {
         .with_state(state)
 }
 
-#[axum::debug_handler]
 pub async fn update(
     State(state): State<AppState>,
     api_token: Option<ApiSecretToken>,
@@ -84,6 +83,57 @@ async fn handle_request(
 }
 
 async fn handle_message(state: &AppState, message: &Message) -> anyhow::Result<()> {
+    let is_send_cmd = message
+        .text
+        .as_deref()
+        .is_some_and(|text| text.starts_with("/send"));
+
+    if is_send_cmd {
+        handle_send_command(state, message).await
+    } else {
+        handle_text_message(state, message).await
+    }
+}
+
+async fn handle_send_command(state: &AppState, message: &Message) -> anyhow::Result<()> {
+    let user = match message.from.as_ref() {
+        Some(user) if !user.is_bot => user,
+        _ => return Ok(()),
+    };
+
+    match message.chat.chat_type {
+        ChatType::Private => {
+            let payload = make_bot_main_message(message.chat.id);
+
+            state.tg_client().send_message(&payload).await;
+        }
+        _ => {
+            let added = state.chats().add_user_chat(user.id, &message.chat).await;
+
+            let tagged_username = user
+                .username
+                .as_deref()
+                .map(|username| format!("@{username}"));
+            let message_username = tagged_username.as_deref().unwrap_or("anonimous");
+
+            let response_message_text = match added {
+                true => format!(
+                    "{message_username} теперь может отправлять анонимные сообщения в этот чат"
+                ),
+                false => format!(
+                    "{message_username} уже может отправлять анонимные сообщения в этот чат"
+                ),
+            };
+
+            let payload = make_bot_text_message(message.chat.id, &response_message_text);
+            state.tg_client().send_message(&payload).await;
+        }
+    }
+
+    Ok(())
+}
+
+async fn handle_text_message(state: &AppState, message: &Message) -> anyhow::Result<()> {
     if message
         .text
         .as_deref()
@@ -92,8 +142,23 @@ async fn handle_message(state: &AppState, message: &Message) -> anyhow::Result<(
         return Ok(());
     }
 
-    let payload = serde_json::json!({
-        "chat_id": message.chat.id,
+    let payload = make_bot_main_message(message.chat.id);
+
+    state.tg_client().send_message(&payload).await;
+
+    Ok(())
+}
+
+fn make_bot_text_message(chat_id: i64, text: &str) -> serde_json::Value {
+    serde_json::json!({
+        "chat_id": chat_id,
+        "text": text,
+    })
+}
+
+fn make_bot_main_message(chat_id: i64) -> serde_json::Value {
+    serde_json::json!({
+        "chat_id": chat_id,
         "text": "Кто выпустил псину? Кто? Кто? Кто?",
         "reply_markup": InlineKeyboardMarkup {
             inline_keyboard: vec![vec![InlineKeyboardButton {
@@ -101,17 +166,7 @@ async fn handle_message(state: &AppState, message: &Message) -> anyhow::Result<(
                 callback_data: CallbackData::ActionSend,
             }]]
         }
-    });
-
-    // let response = WebhookResponse {
-    //     method: "sendMessage".to_string(),
-    //     params: payload,
-    // };
-    if let Err(err) = state.tg_client().send_message(&payload).await {
-        error!("Error sending message to client: {err}");
-    }
-
-    Ok(())
+    })
 }
 
 async fn handle_send_message_button_click(
@@ -129,9 +184,7 @@ async fn handle_send_message_button_click(
         "chat_id": message.chat.id,
         "text": format!("@{username} куда хватаешь?"),
     });
-    if let Err(err) = state.tg_client().send_message(&payload).await {
-        error!("Error sending message to client: {err}");
-    }
+    state.tg_client().send_message(&payload).await;
 
     Ok(())
 }

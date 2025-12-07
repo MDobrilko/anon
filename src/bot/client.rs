@@ -1,5 +1,5 @@
 use anyhow::Context;
-use reqwest::{Client as HttpClient, Url, multipart::Form};
+use reqwest::{Client as HttpClient, Response, Url, multipart::Form};
 
 use crate::{config::Config, log::error};
 
@@ -57,24 +57,52 @@ impl Client {
         Ok(())
     }
 
-    pub async fn send_message(&self, payload: &impl serde::Serialize) -> anyhow::Result<()> {
+    pub async fn send_message(&self, payload: &impl serde::Serialize) {
+        self.send_silent_json_request("sendMessage", Some(payload))
+            .await
+    }
+
+    async fn send_silent_json_request(
+        &self,
+        method: &str,
+        payload: Option<&impl serde::Serialize>,
+    ) {
+        match self.send_json_request(method, payload).await {
+            Ok(_) => {}
+            Err(err) => {
+                error!("{err:#}");
+            }
+        }
+    }
+
+    async fn send_json_request(
+        &self,
+        method: &str,
+        payload: Option<&impl serde::Serialize>,
+    ) -> anyhow::Result<Response> {
         let url = self
             .base_url
-            .join("sendMessage")
+            .join(method)
             .context("Failed to create sendMessage url")?;
 
-        let response = self.http_client.post(url).json(payload).send().await?;
+        let mut request = self.http_client.post(url);
+        if let Some(payload) = payload {
+            request = request.json(payload);
+        }
+
+        let response = request.send().await?;
 
         if let Err(err) = response.error_for_status_ref() {
             let resp_body = response.text().await.ok();
-            error!(
-                "Send message request failed: {}",
-                resp_body.as_deref().unwrap_or("N/A")
-            );
 
-            return Err(err.into());
+            return Err(err).with_context(move || {
+                format!(
+                    "Send \"{method}\" request failed: {}",
+                    resp_body.as_deref().unwrap_or("N/A")
+                )
+            });
         }
 
-        Ok(())
+        Ok(response)
     }
 }
