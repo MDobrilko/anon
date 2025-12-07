@@ -77,7 +77,7 @@ pub enum CallbackData {
 }
 
 mod callback_data_as_string {
-    use serde::{Deserializer, Serializer, de::Visitor, ser::Error as _};
+    use serde::{Deserializer, Serializer, de::Visitor};
 
     use super::CallbackData;
 
@@ -85,11 +85,12 @@ mod callback_data_as_string {
         callback_data: &CallbackData,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        serializer.serialize_str(
-            &serde_json::to_string(callback_data).map_err(|err| {
-                S::Error::custom(format!("Failed to serialize callback data: {err}"))
-            })?,
-        )
+        let serialized = match callback_data {
+            CallbackData::ActionSend => String::new(),
+            CallbackData::SendTo(target) => target.to_string(),
+        };
+
+        serializer.serialize_str(&serialized)
     }
 
     pub fn deserialize<'de, D: Deserializer<'de>>(
@@ -108,8 +109,13 @@ mod callback_data_as_string {
             where
                 E: serde::de::Error,
             {
-                serde_json::from_str(v)
-                    .map_err(|err| E::custom(format!("Failed to deserialize callback data: {err}")))
+                if v.is_empty() {
+                    return Ok(CallbackData::ActionSend);
+                }
+
+                v.parse::<i64>().map(CallbackData::SendTo).map_err(|err| {
+                    E::custom(format!("Failed to parse callback data as send to: {err}"))
+                })
             }
         }
 
