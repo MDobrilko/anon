@@ -224,6 +224,10 @@ async fn handle_chat_select_button_clicked(
     });
 
     state.tg_client().send_message(&payload).await;
+    state
+        .tg_client()
+        .answer_callback_query(&query.id, None)
+        .await;
 
     Ok(())
 }
@@ -243,12 +247,10 @@ async fn handle_chat_button_clicked(
             .or_insert(target_chat);
     }
 
-    let Some(orig_message) = query.message.as_deref() else {
-        return Ok(());
-    };
-
-    let payload = make_bot_text_message(orig_message.chat.id, "Напиши текст сообщения");
-    state.tg_client().send_message(&payload).await;
+    state
+        .tg_client()
+        .answer_callback_query(&query.id, Some("Напиши текст сообщения"))
+        .await;
 
     Ok(())
 }

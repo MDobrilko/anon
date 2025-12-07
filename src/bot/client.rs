@@ -62,10 +62,21 @@ impl Client {
             .await
     }
 
-    async fn send_silent_json_request(
+    pub async fn answer_callback_query(&self, query_id: &str, text: Option<&str>) {
+        self.send_silent_json_request(
+            "answerCallbackQuery",
+            Some(&serde_json::json!({
+                "callback_query_id": query_id,
+                "text": text,
+            })),
+        )
+        .await;
+    }
+
+    async fn send_silent_json_request<T: serde::Serialize>(
         &self,
         method: &str,
-        payload: Option<&impl serde::Serialize>,
+        payload: Option<&T>,
     ) {
         match self.send_json_request(method, payload).await {
             Ok(_) => {}
@@ -75,10 +86,10 @@ impl Client {
         }
     }
 
-    async fn send_json_request(
+    async fn send_json_request<T: serde::Serialize>(
         &self,
         method: &str,
-        payload: Option<&impl serde::Serialize>,
+        payload: Option<&T>,
     ) -> anyhow::Result<Response> {
         let url = self
             .base_url
@@ -87,7 +98,7 @@ impl Client {
 
         let mut request = self.http_client.post(url);
         if let Some(payload) = payload {
-            request = request.json(payload);
+            request = request.json(&payload);
         }
 
         let response = request.send().await?;
