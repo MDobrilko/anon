@@ -66,6 +66,7 @@ pub struct InlineKeyboardMarkup {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InlineKeyboardButton {
     pub text: String,
+    #[serde(with = "callback_data_as_string")]
     pub callback_data: CallbackData,
 }
 
@@ -73,4 +74,45 @@ pub struct InlineKeyboardButton {
 pub enum CallbackData {
     ActionSend,
     SendTo(i64),
+}
+
+mod callback_data_as_string {
+    use serde::{Deserializer, Serializer, de::Visitor, ser::Error as _};
+
+    use super::CallbackData;
+
+    pub fn serialize<S: Serializer>(
+        callback_data: &CallbackData,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(
+            &serde_json::to_string(callback_data).map_err(|err| {
+                S::Error::custom(format!("Failed to serialize callback data: {err}"))
+            })?,
+        )
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<CallbackData, D::Error> {
+        struct StrVisitor;
+
+        impl<'de> Visitor<'de> for StrVisitor {
+            type Value = CallbackData;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "a string")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<CallbackData, E>
+            where
+                E: serde::de::Error,
+            {
+                serde_json::from_str(v)
+                    .map_err(|err| E::custom(format!("Failed to deserialize callback data: {err}")))
+            }
+        }
+
+        deserializer.deserialize_string(StrVisitor)
+    }
 }
