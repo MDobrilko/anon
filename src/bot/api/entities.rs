@@ -92,6 +92,7 @@ pub enum CallbackData {
 pub struct SendPhotoPayload<'a> {
     pub chat_id: i64,
     pub photo: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub caption: Option<&'a str>,
 }
 
