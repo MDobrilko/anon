@@ -86,7 +86,7 @@ mod callback_data_as_string {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let serialized = match callback_data {
-            CallbackData::ActionSend => String::new(),
+            CallbackData::ActionSend => "ActionSend".to_string(),
             CallbackData::SendTo(target) => target.to_string(),
         };
 
@@ -109,7 +109,7 @@ mod callback_data_as_string {
             where
                 E: serde::de::Error,
             {
-                if v.is_empty() {
+                if v == "ActionSend" {
                     return Ok(CallbackData::ActionSend);
                 }
 
