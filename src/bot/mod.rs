@@ -9,6 +9,7 @@ use crate::{
 use anyhow::Context;
 use axum_server::tls_rustls::RustlsConfig;
 use futures::future::maybe_done;
+use sd_notify::{NotifyState, notify};
 use tokio::{
     signal::unix::{SignalKind, signal},
     sync::mpsc::Receiver,
@@ -46,6 +47,8 @@ async fn run_app(config: Config) -> anyhow::Result<()> {
 
     let mut web_handle = std::pin::pin!(maybe_done(tokio::spawn(run_server(state.clone()))));
     let mut shutdown_rx = spawn_shutdown_signal_watcher(state.cancellation_token().clone())?;
+
+    notify(true, &[NotifyState::Ready])?;
 
     tokio::select! {
         biased;
