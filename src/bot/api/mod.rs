@@ -106,7 +106,7 @@ async fn handle_send_command(state: &AppState, message: &Message) -> anyhow::Res
 
     match message.chat.chat_type {
         ChatType::Private => {
-            let payload = make_bot_main_message(message.chat.id);
+            let payload = make_bot_chat_selection_message(state, message.chat.id, user.id).await;
 
             state.tg_client().send_message(&payload).await;
         }
@@ -152,7 +152,7 @@ async fn handle_text_message(state: &AppState, message: &Message) -> anyhow::Res
     match target_chat_id {
         Some(chat_id) => resend_message_anonimously(state, message, chat_id).await,
         None => {
-            let payload = make_bot_main_message(message.chat.id);
+            let payload = make_bot_chat_selection_message(state, message.chat.id, user.id).await;
 
             state.tg_client().send_message(&payload).await;
 
@@ -223,33 +223,11 @@ async fn handle_chat_select_button_clicked(
     state: &AppState,
     query: &CallbackQuery,
 ) -> anyhow::Result<()> {
-    let chats = state.chats().get_chats(query.from.id).await;
-    if chats.is_empty() {
-        return Ok(());
-    }
-
     let Some(orig_message) = query.message.as_deref() else {
         return Ok(());
     };
 
-    let buttons = chats
-        .iter()
-        .filter_map(|chat| match chat.title.as_deref() {
-            Some(title) => Some(vec![InlineKeyboardButton {
-                text: title.to_string(),
-                callback_data: CallbackData::SendTo(chat.id),
-            }]),
-            None => None,
-        })
-        .collect::<Vec<_>>();
-
-    let payload = serde_json::json!({
-        "chat_id": orig_message.chat.id,
-        "text": "Выбери чат",
-        "reply_markup": InlineKeyboardMarkup {
-            inline_keyboard: buttons,
-        }
-    });
+    let payload = make_bot_chat_selection_message(state, orig_message.chat.id, query.from.id).await;
 
     state.tg_client().send_message(&payload).await;
     state
@@ -297,15 +275,56 @@ fn make_bot_text_message(chat_id: i64, text: &str) -> serde_json::Value {
     })
 }
 
-fn make_bot_main_message(chat_id: i64) -> serde_json::Value {
+// fn make_bot_main_message(chat_id: i64) -> serde_json::Value {
+//     serde_json::json!({
+//         "chat_id": chat_id,
+//         "text": "Кто выпустил псину? Кто? Кто? Кто?",
+//         "reply_markup": InlineKeyboardMarkup {
+//             inline_keyboard: vec![vec![InlineKeyboardButton {
+//                 text: "Отправить сообщение".to_string(),
+//                 callback_data: CallbackData::ActionSend,
+//             }]]
+//         }
+//     })
+// }
+
+async fn make_bot_chat_selection_message(
+    state: &AppState,
+    user_chat_id: i64,
+    user_id: i64,
+) -> serde_json::Value {
+    let chats = state.chats().get_chats(user_id).await;
+    if chats.is_empty() {
+        return make_no_chats_message(user_chat_id);
+    }
+
+    let buttons = chats
+        .iter()
+        .filter_map(|chat| match chat.title.as_deref() {
+            Some(title) => Some(vec![InlineKeyboardButton {
+                text: title.to_string(),
+                callback_data: CallbackData::SendTo(chat.id),
+            }]),
+            None => None,
+        })
+        .collect::<Vec<_>>();
+
+    if buttons.is_empty() {
+        return make_no_chats_message(user_chat_id);
+    }
+
+    serde_json::json!({
+        "chat_id": user_chat_id,
+        "text": "Выбери чат",
+        "reply_markup": InlineKeyboardMarkup {
+            inline_keyboard: buttons,
+        }
+    })
+}
+
+fn make_no_chats_message(chat_id: i64) -> serde_json::Value {
     serde_json::json!({
         "chat_id": chat_id,
-        "text": "Кто выпустил псину? Кто? Кто? Кто?",
-        "reply_markup": InlineKeyboardMarkup {
-            inline_keyboard: vec![vec![InlineKeyboardButton {
-                text: "Отправить сообщение".to_string(),
-                callback_data: CallbackData::ActionSend,
-            }]]
-        }
+        "text": "Нет чатов, в которые можно отправлять сообщения. Отправте команду /send в общие чаты с данным ботом, чтобы начать отправлять туда сообщения.",
     })
 }

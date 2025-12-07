@@ -29,8 +29,7 @@ pub fn init(config: &Config) -> anyhow::Result<GlobalLoggerGuard> {
 
         let file = OpenOptions::new()
             .create(true)
-            .write(true)
-            .truncate(false)
+            .append(true)
             .open(log_file)
             .context("Failed to create logger")?;
 
