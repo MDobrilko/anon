@@ -1,7 +1,7 @@
 use anyhow::Context;
 use reqwest::{Client as HttpClient, Response, Url, multipart::Form};
 
-use crate::{config::Config, log::error};
+use crate::{bot::entities::SendPhotoPayload, config::Config, log::error};
 
 pub struct Client {
     base_url: Url,
@@ -60,6 +60,11 @@ impl Client {
     pub async fn send_message(&self, payload: &impl serde::Serialize) {
         self.send_silent_json_request("sendMessage", Some(payload))
             .await
+    }
+
+    pub async fn send_photo(&self, payload: SendPhotoPayload<'_>) {
+        self.send_silent_json_request("sendPhoto", Some(&payload))
+            .await;
     }
 
     pub async fn answer_callback_query(&self, query_id: &str, text: Option<&str>) {

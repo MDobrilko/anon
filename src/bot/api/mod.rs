@@ -9,12 +9,15 @@ use axum::{
 use uuid::Uuid;
 
 use crate::{
-    bot::api::{
-        entities::{
-            CallbackData, CallbackQuery, ChatType, InlineKeyboardButton, InlineKeyboardMarkup,
-            Message, UpdateMessage, WebhookResponse,
+    bot::{
+        api::{
+            entities::{
+                CallbackData, CallbackQuery, ChatType, InlineKeyboardButton, InlineKeyboardMarkup,
+                Message, UpdateMessage, WebhookResponse,
+            },
+            headers::ApiSecretToken,
         },
-        headers::ApiSecretToken,
+        entities::SendPhotoPayload,
     },
     log::{FutureExt, debug, error, info, logger, o},
     state::AppState,
@@ -163,12 +166,22 @@ async fn resend_message_anonimously(
     message: &Message,
     target_chat_id: i64,
 ) -> anyhow::Result<()> {
-    let Some(text) = message.text.as_deref() else {
-        return Ok(());
-    };
+    if let Some(text) = message.text.as_deref() {
+        let payload = make_bot_text_message(target_chat_id, text);
+        state.tg_client().send_message(&payload).await;
+    }
 
-    let payload = make_bot_text_message(target_chat_id, text);
-    state.tg_client().send_message(&payload).await;
+    if let Some(photo_sizes) = message.photo.as_ref().filter(|v| !v.is_empty()) {
+        let file_id = &*photo_sizes[0].file_id;
+
+        state
+            .tg_client()
+            .send_photo(SendPhotoPayload {
+                chat_id: target_chat_id,
+                photo: file_id,
+            })
+            .await;
+    }
 
     Ok(())
 }

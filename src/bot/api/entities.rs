@@ -23,6 +23,7 @@ pub struct Message {
     pub chat: Chat,
     pub text: Option<String>,
     pub date: i32,
+    pub photo: Option<Vec<PhotoSize>>,
     pub callback_query: Option<CallbackQuery>,
 }
 
@@ -51,6 +52,15 @@ pub enum ChatType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct PhotoSize {
+    pub file_id: String,
+    pub file_unique_id: String,
+    pub width: i64,
+    pub height: i64,
+    pub file_size: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CallbackQuery {
     pub id: String,
     pub from: User,
@@ -75,6 +85,12 @@ pub struct InlineKeyboardButton {
 pub enum CallbackData {
     ActionSend,
     SendTo(i64),
+}
+
+#[derive(Debug, Serialize)]
+pub struct SendPhotoPayload<'a> {
+    pub chat_id: i64,
+    pub photo: &'a str,
 }
 
 mod callback_data_as_string {
