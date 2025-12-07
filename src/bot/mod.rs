@@ -8,7 +8,7 @@ use crate::{
 
 use anyhow::Context;
 use axum_server::tls_rustls::RustlsConfig;
-use futures::future::{FutureExt, maybe_done};
+use futures::future::maybe_done;
 use tokio::{
     signal::unix::{SignalKind, signal},
     sync::mpsc::Receiver,

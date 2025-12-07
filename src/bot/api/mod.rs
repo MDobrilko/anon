@@ -76,7 +76,7 @@ async fn handle_request(
         handle_message(state, message).await?;
     };
     if let Some(callback_query) = parsed_request.callback_query.as_ref() {
-        handle_send_message_button_click(state, callback_query).await?;
+        handle_button_click(state, callback_query).await?;
     }
 
     Ok(None)
@@ -137,16 +137,117 @@ async fn handle_send_command(state: &AppState, message: &Message) -> anyhow::Res
 }
 
 async fn handle_text_message(state: &AppState, message: &Message) -> anyhow::Result<()> {
-    if message
-        .text
-        .as_deref()
-        .is_none_or(|t| t.trim() != "bot ping")
-    {
+    if !matches!(message.chat.chat_type, ChatType::Private) {
+        return Ok(());
+    }
+    let Some(user) = message.from.as_ref() else {
+        return Ok(());
+    };
+
+    let target_chat_id = { state.user_letters().read().await.get(&user.id).copied() };
+
+    match target_chat_id {
+        Some(chat_id) => resend_message_anonimously(state, message, chat_id).await,
+        None => {
+            let payload = make_bot_main_message(message.chat.id);
+
+            state.tg_client().send_message(&payload).await;
+
+            Ok(())
+        }
+    }
+}
+
+async fn resend_message_anonimously(
+    state: &AppState,
+    message: &Message,
+    target_chat_id: i64,
+) -> anyhow::Result<()> {
+    let Some(text) = message.text.as_deref() else {
+        return Ok(());
+    };
+
+    let payload = make_bot_text_message(target_chat_id, text);
+    state.tg_client().send_message(&payload).await;
+
+    Ok(())
+}
+
+async fn handle_button_click(state: &AppState, query: &CallbackQuery) -> anyhow::Result<()> {
+    if query.from.is_bot {
         return Ok(());
     }
 
-    let payload = make_bot_main_message(message.chat.id);
+    match query.data.as_ref() {
+        Some(CallbackData::ActionSend) => {
+            handle_chat_select_button_clicked(state, query).await?;
+        }
+        Some(CallbackData::SendTo(target_chat_id)) => {
+            handle_chat_button_clicked(state, query, *target_chat_id).await?;
+        }
+        None => {}
+    }
 
+    Ok(())
+}
+
+async fn handle_chat_select_button_clicked(
+    state: &AppState,
+    query: &CallbackQuery,
+) -> anyhow::Result<()> {
+    let chats = state.chats().get_chats(query.from.id).await;
+    if chats.is_empty() {
+        return Ok(());
+    }
+
+    let Some(orig_message) = query.message.as_deref() else {
+        return Ok(());
+    };
+
+    let buttons = chats
+        .iter()
+        .filter_map(|chat| match chat.title.as_deref() {
+            Some(title) => Some(vec![InlineKeyboardButton {
+                text: title.to_string(),
+                callback_data: CallbackData::SendTo(chat.id),
+            }]),
+            None => None,
+        })
+        .collect::<Vec<_>>();
+
+    let payload = serde_json::json!({
+        "chat_id": orig_message.chat.id,
+        "text": "Выбери чат",
+        "reply_markup": InlineKeyboardMarkup {
+            inline_keyboard: buttons,
+        }
+    });
+
+    state.tg_client().send_message(&payload).await;
+
+    Ok(())
+}
+
+async fn handle_chat_button_clicked(
+    state: &AppState,
+    query: &CallbackQuery,
+    target_chat: i64,
+) -> anyhow::Result<()> {
+    {
+        state
+            .user_letters()
+            .write()
+            .await
+            .entry(query.from.id)
+            .and_modify(|chat| *chat = target_chat)
+            .or_insert(target_chat);
+    }
+
+    let Some(orig_message) = query.message.as_deref() else {
+        return Ok(());
+    };
+
+    let payload = make_bot_text_message(orig_message.chat.id, "Напиши текст сообщения");
     state.tg_client().send_message(&payload).await;
 
     Ok(())
@@ -170,24 +271,4 @@ fn make_bot_main_message(chat_id: i64) -> serde_json::Value {
             }]]
         }
     })
-}
-
-async fn handle_send_message_button_click(
-    state: &AppState,
-    query: &CallbackQuery,
-) -> anyhow::Result<()> {
-    let Some(username) = query.from.username.as_deref() else {
-        return Ok(());
-    };
-    let Some(message) = query.message.as_deref() else {
-        return Ok(());
-    };
-
-    let payload = serde_json::json!({
-        "chat_id": message.chat.id,
-        "text": format!("@{username} куда хватаешь?"),
-    });
-    state.tg_client().send_message(&payload).await;
-
-    Ok(())
 }

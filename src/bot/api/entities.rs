@@ -72,4 +72,5 @@ pub struct InlineKeyboardButton {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CallbackData {
     ActionSend,
+    SendTo(i64),
 }
