@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, RwLockReadGuard};
 
 use crate::bot::entities::Chat as TgChat;
 
@@ -37,7 +37,13 @@ impl Chats {
         })))
     }
 
-    pub async fn get_chats(&self, user_id: i64) -> Vec<ChatInfo> {
+    pub async fn get_chat(&self, chat_id: i64) -> Option<RwLockReadGuard<'_, ChatInfo>> {
+        let guard = self.0.read().await;
+
+        RwLockReadGuard::try_map(guard, |this| this.chats.get(&chat_id)).ok()
+    }
+
+    pub async fn get_user_chats(&self, user_id: i64) -> Vec<ChatInfo> {
         let all_chats = self.0.read().await;
 
         let Some(user_chats) = all_chats.users_to_chats.get(&user_id) else {

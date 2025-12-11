@@ -293,10 +293,20 @@ async fn make_bot_chat_selection_message(
     user_chat_id: i64,
     user_id: i64,
 ) -> serde_json::Value {
-    let chats = state.chats().get_chats(user_id).await;
+    let chats = state.chats().get_user_chats(user_id).await;
     if chats.is_empty() {
         return make_no_chats_message(user_chat_id);
     }
+    let message_text = {
+        let chosen_chat_id = { state.user_chats().read().await.get(&user_id).copied() };
+
+        let chosen_chat = match chosen_chat_id {
+            Some(id) => state.chats().get_chat(id).await,
+            None => None,
+        };
+
+        chosen_chat.as_ref().and_then(|chat| chat.title.as_deref()).map(|title| format!("Ты уже можешь отправлять сообщения в чат \"{title}\". Если хочешь отправить в другой, то выбери его ниже")).unwrap_or_else(|| "Выбери чат".to_string())
+    };
 
     let buttons = chats
         .iter()
@@ -315,7 +325,7 @@ async fn make_bot_chat_selection_message(
 
     serde_json::json!({
         "chat_id": user_chat_id,
-        "text": "Выбери чат",
+        "text": message_text,
         "reply_markup": InlineKeyboardMarkup {
             inline_keyboard: buttons,
         }
