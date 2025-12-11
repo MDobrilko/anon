@@ -2,7 +2,7 @@ use anyhow::Context;
 use reqwest::{Client as HttpClient, Response, Url, multipart::Form};
 
 use crate::{
-    bot::entities::{SendAnimationPayload, SendPhotoPayload},
+    bot::entities::{SendAnimationPayload, SendPhotoPayload, SendStickerPayload},
     config::Config,
     log::{debug, error},
 };
@@ -73,6 +73,11 @@ impl Client {
 
     pub async fn send_animation(&self, payload: SendAnimationPayload<'_>) {
         self.send_silent_json_request("sendAnimation", Some(&payload))
+            .await;
+    }
+
+    pub async fn send_sticker(&self, payload: SendStickerPayload<'_>) {
+        self.send_silent_json_request("sendSticker", Some(&payload))
             .await;
     }
 

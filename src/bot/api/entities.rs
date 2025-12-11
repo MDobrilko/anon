@@ -25,6 +25,7 @@ pub struct Message {
     pub date: i32,
     pub photo: Option<Vec<PhotoSize>>,
     pub animation: Option<Animation>,
+    pub sticker: Option<Sticker>,
     pub caption: Option<String>,
     pub callback_query: Option<CallbackQuery>,
 }
@@ -69,6 +70,11 @@ pub struct Animation {
     pub width: i64,
     pub height: i64,
     pub duration: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Sticker {
+    pub file_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -118,6 +124,12 @@ pub struct SendAnimationPayload<'a> {
     pub height: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub caption: Option<&'a str>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SendStickerPayload<'a> {
+    pub chat_id: i64,
+    pub sticker: &'a str,
 }
 
 mod callback_data_as_string {
